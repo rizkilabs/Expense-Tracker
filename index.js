@@ -20,6 +20,7 @@ program
             id: Date.now(),
             deskripsi,
             nominal: Number(nominal),
+            tanggal: new Date().toISOString().slice(0, 10) // contoh: "2025-06-14"
         };
         data.push(newItem);
         saveData(data);
