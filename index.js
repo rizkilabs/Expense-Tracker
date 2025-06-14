@@ -113,6 +113,13 @@ program
         const filtered = data.filter((item) => item.tanggal.startsWith(bulan));
         const total = filtered.reduce((sum, item) => sum + item.nominal, 0);
 
+        const budget = fs.existsSync("budget.json")
+            ? JSON.parse(fs.readFileSync("budget.json"))
+            : {};
+        if (budget[bulan] && total > budget[bulan]) {
+            console.log("⚠️ WARNING: Pengeluaran melebihi budget bulan ini!");
+        }
+
         console.log(`📅 Total Pengeluaran Bulan ${bulan}: Rp ${total.toLocaleString("id-ID")}`);
     });
 
@@ -131,6 +138,25 @@ program
         filtered.forEach((item) => {
             console.log(`- ${item.tanggal} | ${item.deskripsi} = Rp ${item.nominal.toLocaleString("id-ID")}`);
         });
+    });
+
+program
+    .command("set-budget")
+    .description("Set budget untuk bulan tertentu")
+    .requiredOption("--bulan <bulan>")
+    .requiredOption("--nominal <nominal>")
+    .action((opts) => {
+        const fs = require("fs");
+        const path = "budget.json";
+        const { bulan, nominal } = opts;
+
+        let data = {};
+        if (fs.existsSync(path)) {
+            data = JSON.parse(fs.readFileSync(path));
+        }
+        data[bulan] = Number(nominal);
+        fs.writeFileSync(path, JSON.stringify(data, null, 2));
+        console.log(`✅ Budget bulan ${bulan} diset: Rp ${nominal}`);
     });
 
 program.parse(process.argv);
