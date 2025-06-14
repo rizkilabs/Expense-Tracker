@@ -116,4 +116,21 @@ program
         console.log(`📅 Total Pengeluaran Bulan ${bulan}: Rp ${total.toLocaleString("id-ID")}`);
     });
 
+program
+    .command("list-kategori")
+    .description("Tampilkan pengeluaran berdasarkan kategori")
+    .requiredOption("--kategori <kategori>")
+    .action((opts) => {
+        const { kategori } = opts;
+        const data = loadData();
+        const filtered = data.filter(item => item.kategori.toLowerCase() === kategori.toLowerCase());
+
+        if (filtered.length === 0) return console.log("📭 Tidak ada data dengan kategori itu.");
+
+        console.log(`📂 Daftar pengeluaran kategori "${kategori}":`);
+        filtered.forEach((item) => {
+            console.log(`- ${item.tanggal} | ${item.deskripsi} = Rp ${item.nominal.toLocaleString("id-ID")}`);
+        });
+    });
+
 program.parse(process.argv);
