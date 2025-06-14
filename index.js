@@ -159,4 +159,18 @@ program
         console.log(`✅ Budget bulan ${bulan} diset: Rp ${nominal}`);
     });
 
+program
+    .command("export-csv")
+    .description("Export data ke file CSV")
+    .action(() => {
+        const data = loadData();
+        const header = "ID,Deskripsi,Nominal,Tanggal,Kategori\n";
+        const rows = data.map(item =>
+            `${item.id},"${item.deskripsi}",${item.nominal},${item.tanggal},${item.kategori}`
+        ).join("\n");
+
+        require("fs").writeFileSync("expenses.csv", header + rows);
+        console.log("✅ Data berhasil di-export ke expenses.csv");
+    });
+
 program.parse(process.argv);
