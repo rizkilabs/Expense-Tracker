@@ -90,4 +90,14 @@ program
         }
     });
 
+program
+    .command("total")
+    .description("Hitung total semua pengeluaran")
+    .action(() => {
+        const data = loadData();
+        const total = data.reduce((sum, item) => sum + item.nominal, 0);
+
+        console.log("💰 Total Pengeluaran:", `Rp ${total.toLocaleString("id-ID")}`);
+    });
+
 program.parse(process.argv);
