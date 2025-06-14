@@ -100,4 +100,18 @@ program
         console.log("💰 Total Pengeluaran:", `Rp ${total.toLocaleString("id-ID")}`);
     });
 
+program
+    .command("total-bulan")
+    .description("Hitung total pengeluaran berdasarkan bulan (format: YYYY-MM)")
+    .requiredOption("--bulan <bulan>")
+    .action((opts) => {
+        const { bulan } = opts; // contoh: "2025-06"
+        const data = loadData();
+
+        const filtered = data.filter((item) => item.tanggal.startsWith(bulan));
+        const total = filtered.reduce((sum, item) => sum + item.nominal, 0);
+
+        console.log(`📅 Total Pengeluaran Bulan ${bulan}: Rp ${total.toLocaleString("id-ID")}`);
+    });
+
 program.parse(process.argv);
