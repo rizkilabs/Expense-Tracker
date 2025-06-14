@@ -83,4 +83,21 @@ program
         console.log("✅ Data berhasil diupdate!");
     });
 
+program
+    .command("hapus")
+    .description("Hapus pengeluaran berdasarkan ID")
+    .requiredOption("--id <id>")
+    .action((opts) => {
+        const { id } = opts;
+        const data = loadData();
+        const newData = data.filter((item) => item.id.toString() !== id);
+
+        if (newData.length === data.length) {
+            console.log("❌ ID tidak ditemukan!");
+        } else {
+            saveData(newData);
+            console.log("✅ Pengeluaran berhasil dihapus!");
+        }
+    });
+
 program.parse(process.argv);
