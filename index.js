@@ -1,176 +1,200 @@
 #!/usr/bin/env node
 
-const { program } = require("commander");
-const { loadData, saveData } = require("./lib/fileHandler");
-const fs = require("fs");
+const { program } = require('commander');
+const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const path = require('path');
+const { 
+  readJSON, 
+  writeJSON, 
+  addItem, 
+  updateItem, 
+  deleteItem 
+} = require('./utils/fileHandler');
 
-// Tambah pengeluaran
+// Lokasi file
+const EXPENSES_FILE = 'expenses.json';
+const BUDGET_FILE = 'budget.json';
+
+// Format tanggal ISO
+const getToday = () => new Date().toISOString().slice(0, 10);
+
+// 👉 Command: tambah
 program
-    .command("tambah")
-    .description("Tambah pengeluaran baru")
-    .requiredOption("--deskripsi <deskripsi>")
-    .requiredOption("--nominal <nominal>")
-    .requiredOption("--kategori <kategori>")
-    .action((opts) => {
-        const { deskripsi, nominal, kategori } = opts;
-        if (!deskripsi.trim()) return console.log("❌ Deskripsi tidak boleh kosong!");
-        if (nominal <= 0) return console.log("❌ Nominal harus lebih dari 0!");
+  .command('tambah')
+  .description('Tambah pengeluaran')
+  .requiredOption('--deskripsi <deskripsi>', 'Deskripsi pengeluaran')
+  .requiredOption('--nominal <nominal>', 'Nominal pengeluaran')
+  .option('--kategori <kategori>', 'Kategori pengeluaran')
+  .action((options) => {
+    const { deskripsi, nominal, kategori } = options;
 
-        const data = loadData();
-        const newItem = {
-            id: Date.now(),
-            deskripsi,
-            nominal: Number(nominal),
-            tanggal: new Date().toISOString().slice(0, 10),
-            kategori
-        };
-        data.push(newItem);
-        saveData(data);
-        console.log("✅ Pengeluaran berhasil ditambahkan!");
-    });
+    if (!deskripsi.trim()) {
+      console.log('❌ Deskripsi tidak boleh kosong.');
+      return;
+    }
 
+    const jumlah = parseInt(nominal);
+    if (isNaN(jumlah) || jumlah <= 0) {
+      console.log('❌ Nominal harus angka positif.');
+      return;
+    }
+
+    const dataBaru = {
+      id: uuidv4(),
+      deskripsi,
+      nominal: jumlah,
+      kategori: kategori || 'lainnya',
+      tanggal: getToday()
+    };
+
+    addItem(EXPENSES_FILE, dataBaru);
+    console.log('✅ Pengeluaran berhasil ditambahkan!');
+  });
+
+// 👉 Command: list
 program
-    .command("lihat")
-    .description("Lihat semua pengeluaran")
-    .action(() => {
-        const data = loadData();
-        if (data.length === 0) {
-            console.log("📭 Belum ada data pengeluaran.");
-            return;
-        }
+  .command('list')
+  .description('Lihat semua pengeluaran')
+  .option('--kategori <kategori>', 'Filter berdasarkan kategori')
+  .action((options) => {
+    const data = readJSON(EXPENSES_FILE);
+    const list = options.kategori
+      ? data.filter(item => item.kategori === options.kategori)
+      : data;
 
-        console.log("+----+----------------------+----------+");
-        console.log("| ID | Deskripsi            | Nominal  |");
-        console.log("+----+----------------------+----------+");
+    if (list.length === 0) {
+      console.log('📭 Tidak ada data pengeluaran.');
+      return;
+    }
 
-        data.forEach((item) => {
-            console.log(
-                `| ${item.id.toString().slice(-4).padEnd(4)} | ${item.deskripsi.padEnd(20)} | Rp ${item.nominal
-                    .toString()
-                    .padStart(7)} |`
-            );
-        });
+    console.table(list, ['id', 'tanggal', 'deskripsi', 'kategori', 'nominal']);
+  });
 
-        console.log("+----+----------------------+----------+");
-    });
-
+// 👉 Command: update
 program
-    .command("update")
-    .description("Update pengeluaran berdasarkan ID")
-    .requiredOption("--id <id>")
-    .requiredOption("--deskripsi <deskripsi>")
-    .requiredOption("--nominal <nominal>")
-    .action((opts) => {
-        const { id, deskripsi, nominal } = opts;
-        const data = loadData();
-        const idx = data.findIndex((item) => item.id.toString() === id);
+  .command('update')
+  .description('Update pengeluaran berdasarkan ID')
+  .requiredOption('--id <id>', 'ID data yang mau diubah')
+  .option('--deskripsi <deskripsi>', 'Deskripsi baru')
+  .option('--nominal <nominal>', 'Nominal baru')
+  .option('--kategori <kategori>', 'Kategori baru')
+  .action((options) => {
+    const { id, deskripsi, nominal, kategori } = options;
+    const dataBaru = {};
+    if (deskripsi) dataBaru.deskripsi = deskripsi;
+    if (nominal) dataBaru.nominal = parseInt(nominal);
+    if (kategori) dataBaru.kategori = kategori;
 
-        if (idx === -1) return console.log("❌ ID tidak ditemukan!");
-        if (!deskripsi.trim()) return console.log("❌ Deskripsi tidak boleh kosong!");
-        if (nominal <= 0) return console.log("❌ Nominal harus lebih dari 0!");
+    const berhasil = updateItem(EXPENSES_FILE, id, dataBaru);
+    if (berhasil) {
+      console.log('✅ Data berhasil diupdate.');
+    } else {
+      console.log('❌ ID tidak ditemukan.');
+    }
+  });
 
-        data[idx].deskripsi = deskripsi;
-        data[idx].nominal = Number(nominal);
-        saveData(data);
-        console.log("✅ Data berhasil diupdate!");
-    });
-
+// 👉 Command: hapus
 program
-    .command("hapus")
-    .description("Hapus pengeluaran berdasarkan ID")
-    .requiredOption("--id <id>")
-    .action((opts) => {
-        const { id } = opts;
-        const data = loadData();
-        const newData = data.filter((item) => item.id.toString() !== id);
+  .command('hapus')
+  .description('Hapus pengeluaran berdasarkan ID')
+  .requiredOption('--id <id>', 'ID data yang mau dihapus')
+  .action((options) => {
+    const berhasil = deleteItem(EXPENSES_FILE, options.id);
+    if (berhasil) {
+      console.log('🗑️ Data berhasil dihapus.');
+    } else {
+      console.log('❌ ID tidak ditemukan.');
+    }
+  });
 
-        if (newData.length === data.length) {
-            console.log("❌ ID tidak ditemukan!");
-        } else {
-            saveData(newData);
-            console.log("✅ Pengeluaran berhasil dihapus!");
-        }
-    });
-
+// 👉 Command: total
 program
-    .command("total")
-    .description("Hitung total semua pengeluaran")
-    .action(() => {
-        const data = loadData();
-        const total = data.reduce((sum, item) => sum + item.nominal, 0);
+  .command('total')
+  .description('Hitung total semua pengeluaran')
+  .action(() => {
+    const data = readJSON(EXPENSES_FILE);
+    const total = data.reduce((sum, item) => sum + item.nominal, 0);
+    console.log(`💰 Total semua pengeluaran: Rp${total.toLocaleString()}`);
+  });
 
-        console.log("💰 Total Pengeluaran:", `Rp ${total.toLocaleString("id-ID")}`);
-    });
-
+// 👉 Command: total-bulan
 program
-    .command("total-bulan")
-    .description("Hitung total pengeluaran berdasarkan bulan (format: YYYY-MM)")
-    .requiredOption("--bulan <bulan>")
-    .action((opts) => {
-        const { bulan } = opts; // contoh: "2025-06"
-        const data = loadData();
+  .command('total-bulan')
+  .description('Hitung total pengeluaran per bulan')
+  .requiredOption('--bulan <yyyy-mm>', 'Contoh: 2025-06')
+  .action((options) => {
+    const data = readJSON(EXPENSES_FILE);
+    const list = data.filter(item => item.tanggal.startsWith(options.bulan));
+    const total = list.reduce((sum, item) => sum + item.nominal, 0);
+    console.log(`📅 Total pengeluaran bulan ${options.bulan}: Rp${total.toLocaleString()}`);
+  });
 
-        const filtered = data.filter((item) => item.tanggal.startsWith(bulan));
-        const total = filtered.reduce((sum, item) => sum + item.nominal, 0);
-
-        const budget = fs.existsSync("budget.json")
-            ? JSON.parse(fs.readFileSync("budget.json"))
-            : {};
-        if (budget[bulan] && total > budget[bulan]) {
-            console.log("⚠️ WARNING: Pengeluaran melebihi budget bulan ini!");
-        }
-
-        console.log(`📅 Total Pengeluaran Bulan ${bulan}: Rp ${total.toLocaleString("id-ID")}`);
-    });
-
+// 👉 Command: set-budget
 program
-    .command("list-kategori")
-    .description("Tampilkan pengeluaran berdasarkan kategori")
-    .requiredOption("--kategori <kategori>")
-    .action((opts) => {
-        const { kategori } = opts;
-        const data = loadData();
-        const filtered = data.filter(item => item.kategori.toLowerCase() === kategori.toLowerCase());
+  .command('set-budget')
+  .description('Set budget bulanan (Rp)')
+  .requiredOption('--bulan <yyyy-mm>', 'Contoh: 2025-06')
+  .requiredOption('--jumlah <angka>', 'Contoh: 2000000')
+  .action((options) => {
+    const { bulan, jumlah } = options;
+    const budget = readJSON(BUDGET_FILE);
+    const index = budget.findIndex(b => b.bulan === bulan);
 
-        if (filtered.length === 0) return console.log("📭 Tidak ada data dengan kategori itu.");
+    if (index !== -1) {
+      budget[index].jumlah = parseInt(jumlah);
+    } else {
+      budget.push({ bulan, jumlah: parseInt(jumlah) });
+    }
 
-        console.log(`📂 Daftar pengeluaran kategori "${kategori}":`);
-        filtered.forEach((item) => {
-            console.log(`- ${item.tanggal} | ${item.deskripsi} = Rp ${item.nominal.toLocaleString("id-ID")}`);
-        });
-    });
+    writeJSON(BUDGET_FILE, budget);
+    console.log(`✅ Budget bulan ${bulan} diset: Rp${parseInt(jumlah).toLocaleString()}`);
+  });
 
+// 👉 Command: cek-budget
 program
-    .command("set-budget")
-    .description("Set budget untuk bulan tertentu")
-    .requiredOption("--bulan <bulan>")
-    .requiredOption("--nominal <nominal>")
-    .action((opts) => {
-        const fs = require("fs");
-        const path = "budget.json";
-        const { bulan, nominal } = opts;
+  .command('cek-budget')
+  .description('Cek pengeluaran vs budget bulan tertentu')
+  .requiredOption('--bulan <yyyy-mm>', 'Contoh: 2025-06')
+  .action((options) => {
+    const { bulan } = options;
+    const data = readJSON(EXPENSES_FILE).filter(item => item.tanggal.startsWith(bulan));
+    const total = data.reduce((sum, item) => sum + item.nominal, 0);
 
-        let data = {};
-        if (fs.existsSync(path)) {
-            data = JSON.parse(fs.readFileSync(path));
-        }
-        data[bulan] = Number(nominal);
-        fs.writeFileSync(path, JSON.stringify(data, null, 2));
-        console.log(`✅ Budget bulan ${bulan} diset: Rp ${nominal}`);
-    });
+    const budget = readJSON(BUDGET_FILE).find(b => b.bulan === bulan);
+    if (!budget) {
+      console.log(`⚠️ Budget untuk bulan ${bulan} belum diset.`);
+      return;
+    }
 
+    console.log(`📊 Budget: Rp${budget.jumlah.toLocaleString()}`);
+    console.log(`💸 Pengeluaran: Rp${total.toLocaleString()}`);
+    if (total > budget.jumlah) {
+      console.log('🚨 WARNING: Pengeluaran melebihi budget!');
+    } else {
+      console.log('✅ Masih dalam batas budget.');
+    }
+  });
+
+// 👉 Command: export-csv
 program
-    .command("export-csv")
-    .description("Export data ke file CSV")
-    .action(() => {
-        const data = loadData();
-        const header = "ID,Deskripsi,Nominal,Tanggal,Kategori\n";
-        const rows = data.map(item =>
-            `${item.id},"${item.deskripsi}",${item.nominal},${item.tanggal},${item.kategori}`
-        ).join("\n");
+  .command('export-csv')
+  .description('Export data pengeluaran ke file expenses.csv')
+  .action(() => {
+    const data = readJSON(EXPENSES_FILE);
+    if (data.length === 0) {
+      console.log('📭 Tidak ada data untuk diexport.');
+      return;
+    }
 
-        require("fs").writeFileSync("expenses.csv", header + rows);
-        console.log("✅ Data berhasil di-export ke expenses.csv");
-    });
+    const header = 'ID,Tanggal,Deskripsi,Kategori,Nominal';
+    const rows = data.map(item =>
+      `${item.id},${item.tanggal},"${item.deskripsi}",${item.kategori},${item.nominal}`
+    );
+    const csvContent = [header, ...rows].join('\n');
+
+    fs.writeFileSync(path.join(__dirname, 'expenses.csv'), csvContent);
+    console.log('✅ Data berhasil diexport ke expenses.csv');
+  });
 
 program.parse(process.argv);
