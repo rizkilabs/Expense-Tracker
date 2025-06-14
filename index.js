@@ -62,5 +62,25 @@ program
         console.log("+----+----------------------+----------+");
     });
 
+program
+    .command("update")
+    .description("Update pengeluaran berdasarkan ID")
+    .requiredOption("--id <id>")
+    .requiredOption("--deskripsi <deskripsi>")
+    .requiredOption("--nominal <nominal>")
+    .action((opts) => {
+        const { id, deskripsi, nominal } = opts;
+        const data = loadData();
+        const idx = data.findIndex((item) => item.id.toString() === id);
+
+        if (idx === -1) return console.log("❌ ID tidak ditemukan!");
+        if (!deskripsi.trim()) return console.log("❌ Deskripsi tidak boleh kosong!");
+        if (nominal <= 0) return console.log("❌ Nominal harus lebih dari 0!");
+
+        data[idx].deskripsi = deskripsi;
+        data[idx].nominal = Number(nominal);
+        saveData(data);
+        console.log("✅ Data berhasil diupdate!");
+    });
 
 program.parse(process.argv);
