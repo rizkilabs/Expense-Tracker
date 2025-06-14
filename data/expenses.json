@@ -10,5 +10,18 @@
     "deskripsi": "Beli kopi",
     "nominal": 20000,
     "tanggal": "2025-06-14"
+  },
+  {
+    "id": 1749912354147,
+    "deskripsi": "GoFood",
+    "nominal": 50000,
+    "tanggal": "2025-06-14"
+  },
+  {
+    "id": 1749912475433,
+    "deskripsi": "GoFood",
+    "nominal": 50000,
+    "tanggal": "2025-06-14",
+    "kategori": "makan"
   }
 ]

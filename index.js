@@ -10,8 +10,9 @@ program
     .description("Tambah pengeluaran baru")
     .requiredOption("--deskripsi <deskripsi>")
     .requiredOption("--nominal <nominal>")
+    .requiredOption("--kategori <kategori>")
     .action((opts) => {
-        const { deskripsi, nominal } = opts;
+        const { deskripsi, nominal, kategori } = opts;
         if (!deskripsi.trim()) return console.log("❌ Deskripsi tidak boleh kosong!");
         if (nominal <= 0) return console.log("❌ Nominal harus lebih dari 0!");
 
@@ -20,7 +21,8 @@ program
             id: Date.now(),
             deskripsi,
             nominal: Number(nominal),
-            tanggal: new Date().toISOString().slice(0, 10) // contoh: "2025-06-14"
+            tanggal: new Date().toISOString().slice(0, 10),
+            kategori
         };
         data.push(newItem);
         saveData(data);
