@@ -1,4 +1,13 @@
-./node_modules
-./expense.csv
-./data
-./package-lock.json
+# Dependencies
+node_modules/
+
+# Lock file
+package-lock.json
+
+# Local data & exports
+data/
+expense.csv
+
+# MacOS & logs
+.DS_Store
+*.log
