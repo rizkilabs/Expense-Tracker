@@ -1,19 +1,8 @@
 #!/usr/bin/env node
 
 const { program } = require("commander");
+const { loadData, saveData } = require("./lib/fileHandler");
 const fs = require("fs");
-const filePath = "expenses.json";
-
-// Baca data dari file
-function loadData() {
-    if (!fs.existsSync(filePath)) return [];
-    return JSON.parse(fs.readFileSync(filePath));
-}
-
-// Simpan data ke file
-function saveData(data) {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-}
 
 // Tambah pengeluaran
 program
